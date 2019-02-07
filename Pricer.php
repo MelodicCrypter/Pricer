@@ -4,8 +4,8 @@
  * First, you need to convert the base price (your currency) to your user's currency. e.g, 1GBP to HKD
  * Then after that you can already convert your price to your user's equivalent-currency price.
  *
- * API used for latest currency is from exchangeratesapi.io
- * API used for user's details is from geoplugin.net
+ * API used for fetching latest currency is from exchangeratesapi.io
+ * API used for fetching user's details is from geoplugin.net
  */
 
 class Pricer
