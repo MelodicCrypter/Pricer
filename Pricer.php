@@ -1,34 +1,42 @@
 <?php
-
 /**
- * The purpose of this class is to set a fixed price for your product or service. First, you need
- * to convert the base price which is from (any currency, e.g, GBP) to the user's currency.
- * Process is simply to get the rate first at Fixer.io API for GBP-USD
- * and then secondly, get the user's currency using MyCurrency.net API which base is USD.
- * All of these are not needed if you have a subscription to currency APIs, however, they are too
- * costly.
+ * The purpose of this class is to set a fixed-auto-converted price for your product or service.
+ * First, you need to convert the base price (your currency) to your user's currency. e.g, 1GBP to HKD
+ * Then after that you can already convert your price to your user's equivalent-currency price.
  *
- * So (result from Fixer API multiplied by the result of MyCurrency API) then multiplied by the Service Price
+ * API used for latest currency is from exchangeratesapi.io
+ * API used for user's details is from geoplugin.net
  */
- 
+
 class Pricer
 {
-    protected $servicePrice;
-    protected $gbpToUSDRate;
+    // Your Properties
+    protected $myCurrencyCode;
+    protected $myPrice;
+    // Your User's Properties
+    protected $userConvertedPrice;
     protected $userCurrencySymbol;
     protected $userCurrencyCode;
     protected $userCurrencyRate;
-    protected $userConvertedPrice;
     protected $userIPAddress;
     protected $userCountry;
     protected $userRegion;
 
+
+    /**
+     * @param String $cur
+     */
+    public function setMyCurrencyCode(String $cur)
+    {
+        $this->myCurrencyCode = $cur;
+    }
+
     /**
      * @param Int $price
      */
-    public function setServicePrice(Int $price)
+    public function setMyPrice(Int $price)
     {
-        $this->servicePrice = $price;
+        $this->myPrice = $price;
     }
 
     /**
@@ -37,13 +45,36 @@ class Pricer
     public function getConvertedPrice()
     {
         // Turning on all the methods
-        self::setUserCurrencySymbolAndCode();
+        self::setUserDetails();
         self::setUserCurrencyRate();
-        self::setGBPToUSDRate();
-
-        // Formula ( ($this->gbpToUSDRate * $this->userCurrencyRate) * $this->servicePrice
-        $this->userConvertedPrice = ($this->gbpToUSDRate * $this->userCurrencyRate) * $this->servicePrice;
+        // Formula : price * userCurrencyRate
+        $this->userConvertedPrice = $this->myPrice * $this->userCurrencyRate;
         return number_format($this->userConvertedPrice, 2);
+    }
+
+    /**
+     * @return String
+     */
+    public function getMyCurrencyCode()
+    {
+        return $this->myCurrencyCode;
+    }
+
+    /**
+     * @return Float
+     */
+    public function getMyPrice()
+    {
+        return $this->myPrice;
+    }
+
+    /**
+     * @return String
+     */
+    public function getUserCurrencyRate()
+    {
+        self::setUserCurrencyRate();
+        return $this->userCurrencyRate;
     }
 
     /**
@@ -51,17 +82,16 @@ class Pricer
      */
     public function getUserCurrencyCode()
     {
-        self::setUserCurrencySymbolAndCode();
+        self::setUserDetails();
         return $this->userCurrencyCode;
     }
-
 
     /**
      * @return mixed
      */
     public function getUserCurrencySymbol()
     {
-        self::setUserCurrencySymbolAndCode();
+        self::setUserDetails();
         return $this->userCurrencySymbol;
     }
 
@@ -70,7 +100,7 @@ class Pricer
      */
     public function getUserCountry()
     {
-        self::setUserCurrencySymbolAndCode();
+        self::setUserDetails();
         return $this->userCountry;
     }
 
@@ -79,7 +109,7 @@ class Pricer
      */
     public function getUserRegion()
     {
-        self::setUserCurrencySymbolAndCode();
+        self::setUserDetails();
         return $this->userRegion;
     }
 
@@ -88,15 +118,15 @@ class Pricer
      */
     public function getUserIP()
     {
-        self::setUserCurrencySymbolAndCode();
+        self::setUserDetails();
         return $this->userIPAddress;
     }
 
-
     /**
-     * 
+     * This will set all your user's details:
+     * IP, Currency Symbol, Currency Code, Country, and Region
      */
-    protected function setUserCurrencySymbolAndCode()
+    protected function setUserDetails()
     {
         // User's IP
         $proxyPublicIP = filter_var(getenv('REMOTE_ADDR'), FILTER_VALIDATE_IP, FILTER_FLAG_IPV4);
@@ -114,45 +144,20 @@ class Pricer
         $this->userIPAddress = $proxyPublicIP;
     }
 
-
     /**
+     * This is will convert your base currency to the user's currency
      *
+     * For example, if you set your currency to GBP, and your user is from Hongkong
+     * then setUserCurrencyRate() will call the API to get a conversion rate for 1GBP to HKD
      */
     protected function setUserCurrencyRate()
     {
         // Get the latest exchange rate from MyCurrency API (base is USD)
-        $url = 'http://www.mycurrency.net/service/rates';
-        $retrievedAllRates = json_decode(file_get_contents($url), true);
-
-        // Search the user's code in the $retrievedAllRates array
-        foreach ($retrievedAllRates as $index => $rate) {
-            if (in_array($this->userCurrencyCode, (array)$rate['currency_code'])) {
-                // The currency rate of the user casted as float
-                $implodedUserCurrencyRate  = implode('', (array)$retrievedAllRates[$index]['rate']);
-                $this->userCurrencyRate = self::formatNumberNoRound($implodedUserCurrencyRate);
-            }
-        }
+        $url = 'https://api.exchangeratesapi.io/latest?base='.$this->myCurrencyCode.'&symbols='.$this->userCurrencyCode;
+        $retrievedData = json_decode(file_get_contents($url), true);
+        // Your user's rate casted from string to float
+        $this->userCurrencyRate = self::formatNumberNoRound($retrievedData['rates'][$this->userCurrencyCode]);
     }
-
-
-    /**
-     *
-     */
-    protected function setGBPToUSDRate()
-    {
-        // Get the latest exchange rate for USD from Fixer API (base is GBP)
-        $url = 'http://api.fixer.io/latest?base=GBP&symbols=GBP,USD';
-        $retrievedGBPRate = json_decode(file_get_contents($url), true);
-        // Get the retrieved rate of 1 GBP to USD
-        foreach ($retrievedGBPRate as $index => $r) {
-            if (array_key_exists('USD', (array)$r)) {
-                // The GBP to USD rate casted as float
-                $implodedGBPtoUSDRate  = implode('', (array)$r['USD']);
-                $this->gbpToUSDRate = self::formatNumberNoRound($implodedGBPtoUSDRate);
-            }
-        }
-    }
-
 
     /**
      * @param $num
@@ -163,7 +168,6 @@ class Pricer
         $step1 = $num * 100;
         $step2 = floor($step1);
         $result = (float)($step2 / 100);
-
         return $result;
     }
 }
