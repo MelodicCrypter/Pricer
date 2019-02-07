@@ -130,7 +130,7 @@ class Pricer
     {
         // User's IP
         $proxyPublicIP = filter_var(getenv('REMOTE_ADDR'), FILTER_VALIDATE_IP, FILTER_FLAG_IPV4);
-        // Getting the user's Currency Symbol and Currency Code
+        // Getting the user's details
         $geo = unserialize(file_get_contents('http://www.geoplugin.net/php.gp?ip='.$proxyPublicIP));
         // User's currency symbol
         $this->userCurrencySymbol = $geo['geoplugin_currencySymbol'] ?? '*';
@@ -145,14 +145,14 @@ class Pricer
     }
 
     /**
-     * This is will convert your base currency to the user's currency
+     * This will get the latest conversion between your curency and your user's currency
      *
-     * For example, if you set your currency to GBP, and your user is from Hongkong
+     * For example, if you set your currency to GBP, and your user is from Hong Kong
      * then setUserCurrencyRate() will call the API to get a conversion rate for 1GBP to HKD
      */
     protected function setUserCurrencyRate()
     {
-        // Get the latest exchange rate from MyCurrency API (base is USD)
+        // Get the latest exchange rate from ExchangeRate API (base is your own currency)
         $url = 'https://api.exchangeratesapi.io/latest?base='.$this->myCurrencyCode.'&symbols='.$this->userCurrencyCode;
         $retrievedData = json_decode(file_get_contents($url), true);
         // Your user's rate casted from string to float
