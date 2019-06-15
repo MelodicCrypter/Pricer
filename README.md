@@ -1,5 +1,5 @@
 # Pricer
-A PHP Class (tool) I created in order to set a fixed and auto-converted price for your products or services regardless of your user's currency. 😎 All you have to do is set your currency and your price, and let *Pricer* do the conversion.
+A PHP Class (tool) to set a fixed and auto-converted price for your products or services regardless of your user's currency. 😎 All you have to do is set your currency and your price, and let *Pricer* do the conversion.
 
 For an instance, you are creating a project (site or online store) and your client is from United Kingdom. And your client is selling products or services wolrdwide (e.g, web maintenance, items, etc.) If a visitor from Japan wants to buy from your client, he/she should see the prices in Yen (that is Japan's currency - JPY). 
 
